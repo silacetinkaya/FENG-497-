@@ -3,8 +3,13 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.optim as optim
 
+from torch.utils.data import DataLoader, random_split
+from utils.train_utils import validate
+
 from dataset import PolypDataset
 from unet import get_unet_model
+
+
 
 #from utils.dataset import PolypDataset -> bu şekilde hata veriyordu bende
 #from models.unet import get_unet_model
@@ -16,19 +21,35 @@ def main():
     print("Using device:", device)
 
     # 2) Dataset oluştur
-    train_dataset = PolypDataset(
+    dataset = PolypDataset(
         images_dir="data/kvasir/images",
         masks_dir="data/kvasir/masks",
-        transform=None  # ilk versiyonda veri artırma yok
+        transform=None
     )
 
-    # Eğer dataset boşsa uyarı verelim
-    if len(train_dataset) == 0:
+    # Eğer dataset boşsa uyarı 
+    if len(dataset) == 0:
         print("Uyarı: Dataset boş görünüyor! data/kvasir/images ve masks içinde dosya var mı?")
         return
 
-    # 3) DataLoader
-    train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
+    # 3) Train / Validation split (%80 / %20)
+    train_size = int(0.8 * len(dataset))
+    val_size = len(dataset) - train_size
+
+    train_dataset, val_dataset = random_split(
+        dataset, [train_size, val_size]
+    )
+
+    train_loader = DataLoader(
+        train_dataset, batch_size=4, shuffle=True
+    )
+    val_loader = DataLoader(
+        val_dataset, batch_size=4, shuffle=False
+    )
+
+    print(f"Train samples: {len(train_dataset)}")
+    print(f"Val samples:   {len(val_dataset)}")
+
 
     # 4) Modeli al
     model = get_unet_model().to(device)
@@ -61,8 +82,22 @@ def main():
 
             total_loss += loss.item()
 
-        avg_loss = total_loss / len(train_loader)
-        print(f"Epoch [{epoch+1}/{num_epochs}] - Loss: {avg_loss:.4f}")
+        avg_train_loss = total_loss / len(train_loader)
+
+        # Validation
+        val_loss, val_dice, val_iou = validate(
+            model, val_loader, criterion, device
+        )
+
+        print(f"""
+        Epoch [{epoch + 1}/{num_epochs}]
+        Train Loss: {avg_train_loss:.4f}
+        Val Loss:   {val_loss:.4f}
+        Dice:       {val_dice:.4f}
+        IoU:        {val_iou:.4f}
+        """)
+
+
 
     # 7) Modeli kaydet
     torch.save(model.state_dict(), "models/unet_polyp.pth")
