@@ -3,8 +3,11 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.optim as optim
 
-from utils.dataset import PolypDataset
-from models.unet import get_unet_model
+from dataset import PolypDataset
+from unet import get_unet_model
+
+#from utils.dataset import PolypDataset -> bu şekilde hata veriyordu bende
+#from models.unet import get_unet_model
 
 
 def main():

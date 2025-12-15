@@ -1,0 +1,54 @@
+# ======================
+# Python cache / bytecode
+# ======================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ======================
+# Virtual environment
+# ======================
+.venv/
+venv/
+
+# ======================
+# IDE files
+# ======================
+.idea/
+
+# ======================
+# DATASET STRUCTURE
+# Klasörler kalsın, image'lar ignore
+# ======================
+
+# Kvasir images & masks
+data/kvasir/images/*
+data/kvasir/masks/*
+
+# Test images
+data/test_data/*
+
+# Allow .gitkeep files
+!data/kvasir/images/.gitkeep
+!data/kvasir/masks/.gitkeep
+!data/test_data/.gitkeep
+
+# ======================
+# MODELS (trained weights)
+# ======================
+models/*
+!models/.gitkeep
+
+# ======================
+# RESULTS (generated outputs)
+# ======================
+results/overlays/*
+!results/overlays/.gitkeep
+
+
+# ======================
+# OS specific
+# ======================
+.DS_Store
+Thumbs.db

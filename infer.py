@@ -3,7 +3,8 @@ import cv2
 import torch
 import numpy as np
 
-from models.unet import get_unet_model
+
+from unet import get_unet_model
 
 
 def load_image(path, size=(256, 256)):
@@ -54,37 +55,50 @@ def main():
     model.eval()
     print("Model yüklendi.")
 
-    # 2) Test edilecek bir görüntü seç (data/kvasir/images içinden ilk dosya)
-    images_dir = "data/kvasir/images"
-    image_files = [
-        f for f in os.listdir(images_dir)
+    # Overlay sonuçları için klasör
+    os.makedirs("results/overlays", exist_ok=True)
+
+
+    images_dir = "data/test_data"
+    test_image_paths = [
+        os.path.join(images_dir, f)
+        for f in os.listdir(images_dir)
         if f.lower().endswith((".jpg", ".jpeg", ".png"))
     ]
 
-    if not image_files:
-        print("Uyarı: data/kvasir/images klasöründe görüntü bulunamadı!")
+    if not test_image_paths:
+        print("Uyarı: data/test_data klasöründe görüntü bulunamadı!")
         return
 
-    test_image_name = image_files[0]  # istersen bunu elle değiştirebilirsin
-    test_image_path = os.path.join(images_dir, test_image_name)
-    print(f"Test görüntüsü: {test_image_path}")
+    print(f"{len(test_image_paths)} adet test görüntüsü bulundu.")
 
-    # 3) Görüntüyü yükle
-    img_tensor, img_rgb = load_image(test_image_path)
-    img_tensor = img_tensor.to(device)
 
-    # 4) Modelden tahmin al
-    with torch.no_grad():
-        pred = model(img_tensor)
-        pred = torch.sigmoid(pred)
-        pred = pred.squeeze().cpu().numpy()  # [H, W]
+    for test_image_path in test_image_paths:
+        print(f"\nİşleniyor: {test_image_path}")
 
-    # 5) Threshold uygula (0.5 üstü polip kabul)
-    mask = (pred > 0.5).astype(np.float32)
+        # Görüntüyü yükle
+        img_tensor, img_rgb = load_image(test_image_path)
+        img_tensor = img_tensor.to(device)
 
-    # 6) Overlay kaydet
-    save_mask_overlay(img_rgb, mask, save_path="overlay_result.png")
+        # Modelden tahmin al
+        with torch.no_grad():
+            pred = model(img_tensor)
+            pred = torch.sigmoid(pred)
+            pred = pred.squeeze().cpu().numpy()
+
+        # Threshold uygula
+        mask = (pred > 0.5).astype(np.float32)
+
+        # Kaydedilecek dosya adı
+        image_name = os.path.splitext(os.path.basename(test_image_path))[0]
+        save_path = f"results/overlays/{image_name}_overlay.png"
+
+        # Overlay kaydet
+        save_mask_overlay(img_rgb, mask, save_path)
+
+    print("\n✅ Tüm test görüntüleri işlendi.")
 
 
 if __name__ == "__main__":
     main()
+
