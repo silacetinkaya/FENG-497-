@@ -8,10 +8,10 @@ from unet import get_unet_model
 
 
 def load_image(path, size=(256, 256)):
-    """Görüntüyü oku, RGB'ye çevir, resize et ve tensor hazırla."""
+    """Read image, convert to RGB, resize and prepare tensor."""
     image_bgr = cv2.imread(path)
     if image_bgr is None:
-        raise ValueError(f"Görüntü okunamadı: {path}")
+        raise ValueError(f"Image could not be read: {path}")
 
     image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
     image_rgb = cv2.resize(image_rgb, size)
@@ -20,29 +20,29 @@ def load_image(path, size=(256, 256)):
     img_tensor = torch.from_numpy(image_rgb).permute(2, 0, 1).float() / 255.0
     img_tensor = img_tensor.unsqueeze(0)  # batch dimension
 
-    return img_tensor, image_rgb  # tensor, gösterilecek RGB image
+    return img_tensor, image_rgb  # tensor, RGB image for display
 
 
 def save_mask_overlay(image_rgb, mask, save_path="overlay_result.png"):
     """
-    Orijinal görüntü üzerine maskeyi kırmızı overlay olarak uygula ve kaydet.
+    Apply the mask as a red overlay on the original image and save.
     image_rgb: [H, W, 3] (RGB)
     mask: [H, W] 0-1
     """
-    # Maskeyi 0-255 aralığına çıkar
+    # Scale mask to 0-255
     mask_uint8 = (mask * 255).astype(np.uint8)
 
-    # Kırmızı overlay oluştur
+    # Create red overlay
     mask_color = np.zeros_like(image_rgb)
-    mask_color[:, :, 0] = mask_uint8  # R kanalını doldur (kırmızı)
+    mask_color[:, :, 0] = mask_uint8  # fill R channel (red)
 
-    # Orijinal + mask overlay
+    # Original + mask overlay
     overlay = cv2.addWeighted(image_rgb, 0.7, mask_color, 0.3, 0)
 
-    # OpenCV BGR beklediği için dönüştür ve kaydet
+    # Convert to BGR for OpenCV and save
     overlay_bgr = cv2.cvtColor(overlay, cv2.COLOR_RGB2BGR)
     cv2.imwrite(save_path, overlay_bgr)
-    print(f"Overlay kaydedildi: {save_path}")
+    print(f"Overlay saved: {save_path}")
 
 
 def main():
@@ -53,13 +53,13 @@ def main():
     model = get_unet_model().to(device)
     model.load_state_dict(torch.load("models/unet_polyp.pth", map_location=device))
     model.eval()
-    print("Model yüklendi.")
+    print("Model loaded.")
 
-    # Overlay sonuçları için klasör
+    # Folder for overlay results
     os.makedirs("results/overlays", exist_ok=True)
 
 
-    images_dir = "data/test_data"
+    images_dir = "data/cvc_test/images"
     test_image_paths = [
         os.path.join(images_dir, f)
         for f in os.listdir(images_dir)
@@ -67,38 +67,37 @@ def main():
     ]
 
     if not test_image_paths:
-        print("Uyarı: data/test_data klasöründe görüntü bulunamadı!")
+        print("Warning: no images found in data/cvc_test/images!")
         return
 
-    print(f"{len(test_image_paths)} adet test görüntüsü bulundu.")
+    print(f"{len(test_image_paths)} test images found.")
 
 
     for test_image_path in test_image_paths:
-        print(f"\nİşleniyor: {test_image_path}")
+        print(f"\nProcessing: {test_image_path}")
 
-        # Görüntüyü yükle
+        # Load image
         img_tensor, img_rgb = load_image(test_image_path)
         img_tensor = img_tensor.to(device)
 
-        # Modelden tahmin al
+        # Get prediction from model
         with torch.no_grad():
             pred = model(img_tensor)
             pred = torch.sigmoid(pred)
             pred = pred.squeeze().cpu().numpy()
 
-        # Threshold uygula
+        # Apply threshold
         mask = (pred > 0.5).astype(np.float32)
 
-        # Kaydedilecek dosya adı
+        # Filename to save
         image_name = os.path.splitext(os.path.basename(test_image_path))[0]
         save_path = f"results/overlays/{image_name}_overlay.png"
 
-        # Overlay kaydet
+        # Save overlay
         save_mask_overlay(img_rgb, mask, save_path)
 
-    print("\n✅ Tüm test görüntüleri işlendi.")
+    print("\nAll test images processed.")
 
 
 if __name__ == "__main__":
     main()
-

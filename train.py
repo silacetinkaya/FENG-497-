@@ -1,5 +1,4 @@
 import torch
-from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.optim as optim
 
@@ -11,28 +10,28 @@ from unet import get_unet_model
 
 
 
-#from utils.dataset import PolypDataset -> bu şekilde hata veriyordu bende
+#from utils.dataset import PolypDataset -> this caused an error for me
 #from models.unet import get_unet_model
 
 
 def main():
-    # 1) Cihaz seç (GPU varsa GPU)
+    # 1) Select device (use GPU if available)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print("Using device:", device)
 
-    # 2) Dataset oluştur
+    # 2) Create dataset
     dataset = PolypDataset(
         images_dir="data/kvasir/images",
         masks_dir="data/kvasir/masks",
         transform=None
     )
 
-    # Eğer dataset boşsa uyarı 
+    # If dataset is empty warn
     if len(dataset) == 0:
-        print("Uyarı: Dataset boş görünüyor! data/kvasir/images ve masks içinde dosya var mı?")
+        print("Warning: Dataset appears empty! Are there files in data/kvasir/images and masks?")
         return
 
-    # 3) Train / Validation split (%80 / %20)
+    # 3) Train / Validation split (80% / 20%)
     train_size = int(0.8 * len(dataset))
     val_size = len(dataset) - train_size
 
@@ -51,14 +50,14 @@ def main():
     print(f"Val samples:   {len(val_dataset)}")
 
 
-    # 4) Modeli al
+    # 4) Get model
     model = get_unet_model().to(device)
 
-    # 5) Loss ve optimizer
+    # 5) Loss and optimizer
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
-    # 6) Eğitim döngüsü (deneme için az epoch)
+    # 6) Training loop (few epochs for testing)
     num_epochs = 2
 
     for epoch in range(num_epochs):
@@ -69,13 +68,13 @@ def main():
             images = images.to(device)
             masks = masks.to(device)
 
-            # İleri yayılım
+            # Forward pass
             preds = model(images)
 
             # Loss
             loss = criterion(preds, masks)
 
-            # Geri yayılım + ağırlık güncelleme
+            # Backpropagation + weight update
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -99,9 +98,9 @@ def main():
 
 
 
-    # 7) Modeli kaydet
+    # 7) Save model
     torch.save(model.state_dict(), "models/unet_polyp.pth")
-    print("Model kaydedildi: models/unet_polyp.pth")
+    print("Model saved: models/unet_polyp.pth")
 
 
 if __name__ == "__main__":

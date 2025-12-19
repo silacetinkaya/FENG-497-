@@ -9,8 +9,8 @@ class PolypDataset(Dataset):
         self.masks_dir = masks_dir
         self.transform = transform
 
-        # images_dir içindeki tüm dosya isimlerini listele
-        # Sadece görüntü dosyalarını al (gizli dosyaları ve diğerlerini atla)
+        # list all filenames in images_dir
+        # Only take image files (skip hidden files and others)
         valid_exts = (".jpg", ".jpeg", ".png")
         self.ids = [
             f for f in os.listdir(images_dir)
@@ -27,19 +27,19 @@ class PolypDataset(Dataset):
         img_path = os.path.join(self.images_dir, img_id)
         mask_path = os.path.join(self.masks_dir, img_id)
 
-        # Görüntüyü oku (BGR gelir)
+        # Read image (BGR is returned)
         image = cv2.imread(img_path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        # Maskeyi siyah-beyaz oku
+        # Read mask in grayscale
         mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
 
-        # Hepsini sabit boyuta getir (örnek: 256x256)
+        # Resize everything to fixed size (e.g., 256x256)
         target_size = (256, 256)  # (width, height)
         image = cv2.resize(image, target_size)
         mask = cv2.resize(mask, target_size)
 
-        # İstersen burada transform uygula (şimdilik yok)
+        # If you want apply transform here (none for now)
         if self.transform is not None:
             augmented = self.transform(image=image, mask=mask)
             image = augmented["image"]
@@ -52,4 +52,3 @@ class PolypDataset(Dataset):
         mask = torch.from_numpy(mask).unsqueeze(0).float() / 255.0
 
         return image, mask
-

@@ -27,12 +27,17 @@ data/kvasir/images/*
 data/kvasir/masks/*
 
 # Test images
-data/test_data/*
+data/cvc_test/images/*
+data/cvc_test/masks/*
+
 
 # Allow .gitkeep files
 !data/kvasir/images/.gitkeep
 !data/kvasir/masks/.gitkeep
-!data/test_data/.gitkeep
+
+
+!data/cvc_test/images/.gitkeep
+!data/cvc_test/masks/.gitkeep
 
 # ======================
 # MODELS (trained weights)
